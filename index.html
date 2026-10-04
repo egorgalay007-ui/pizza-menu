@@ -1,134 +1,269 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-theme="dark">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Доставка Еды</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
-  body { background:#121212; color:#fff; font-family:'Segoe UI',Roboto,sans-serif; margin:0; padding:15px; padding-bottom:90px; text-align:center; }
-  .header h1 { margin-bottom:5px; color:#ff9800; }
-  .header p { color:#888; margin-top:0; font-size:14px; }
-  .list { display:flex; flex-direction:column; gap:15px; margin-top:20px; }
-  .cat { text-align:left; color:#ff9800; margin:15px 0 0; font-size:22px; }
-  .product-card { background:#1e1e1e; border-radius:12px; padding:15px; border:1px solid #2c2c2c; box-shadow:0 4px 6px rgba(0,0,0,.3); }
-  .product-emoji { font-size:40px; margin-bottom:10px; }
-  .photo { width:100%; height:180px; object-fit:cover; border-radius:10px; margin-bottom:8px; }
-  .product-card h3 { margin:5px 0; font-size:18px; }
-  .price { color:#4caf50; font-weight:bold; font-size:16px; margin:8px 0; }
-  .add-btn { background:#ff9800; color:#000; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer; width:100%; font-size:14px; }
-  .counter { display:flex; justify-content:space-between; align-items:center; background:#2c2c2c; border-radius:8px; overflow:hidden; }
-  .count-btn { background:#ff9800; color:#000; border:none; padding:10px 15px; font-weight:bold; font-size:16px; cursor:pointer; }
-  .count-text { font-weight:bold; }
+  /* ===== Цветовые темы ===== */
+  :root, [data-theme="dark"] {
+    --bg: #0f1115;
+    --bg-blur: rgba(15,17,21,.85);
+    --surface: #181b22;
+    --surface-2: #232733;
+    --text: #f2f4f8;
+    --muted: #8b93a7;
+    --accent: #ff7a1a;
+    --accent-soft: rgba(255,122,26,.14);
+    --ok: #2ecc71;
+    --border: rgba(255,255,255,.07);
+    --shadow: 0 12px 28px -12px rgba(0,0,0,.7);
+  }
+  [data-theme="light"] {
+    --bg: #f6f4f0;
+    --bg-blur: rgba(246,244,240,.88);
+    --surface: #ffffff;
+    --surface-2: #efece6;
+    --text: #1c1e24;
+    --muted: #6c7280;
+    --accent: #f26a0f;
+    --accent-soft: rgba(242,106,15,.12);
+    --ok: #1fa85a;
+    --border: rgba(0,0,0,.08);
+    --shadow: 0 12px 28px -14px rgba(0,0,0,.25);
+  }
 
-  .cart-row { display:flex; align-items:center; gap:12px; background:#1e1e1e; border:1px solid #2c2c2c; border-radius:12px; padding:12px; text-align:left; }
-  .cart-row.off { opacity:.45; }
-  .cart-row input[type=checkbox] { width:24px; height:24px; accent-color:#ff9800; flex-shrink:0; }
-  .cart-info { flex:1; }
-  .cart-info b { display:block; font-size:16px; }
-  .cart-info span { color:#4caf50; font-size:14px; }
-  .cart-row .counter { width:110px; flex-shrink:0; }
-  .cart-row .count-btn { padding:8px 12px; }
-  .back-btn { background:none; border:none; color:#ff9800; font-size:16px; cursor:pointer; float:left; }
-  .total-line { margin-top:20px; font-size:20px; font-weight:bold; }
-  .old-price { color:#888; text-decoration:line-through; font-size:16px; margin-right:8px; }
-  .discount-line { color:#ff9800; font-size:15px; margin-top:6px; }
+  /* ===== База ===== */
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+    padding-bottom: 100px; transition: background .3s, color .3s;
+  }
+  button { font-family: inherit; }
+  .hidden { display: none !important; }
+  .screen { animation: screenIn .3s ease; }
 
-  .game { margin-top:25px; background:#1e1e1e; border:2px dashed #ff9800; border-radius:12px; padding:15px; }
-  .game h3 { margin:0 0 5px; color:#ff9800; }
-  .game p { margin:0 0 12px; color:#aaa; font-size:14px; }
-  .boxes { display:flex; justify-content:center; gap:12px; }
-  .box { font-size:44px; background:#2c2c2c; border:none; border-radius:12px; width:80px; height:80px; cursor:pointer; transition:transform .15s; }
-  .box:active { transform:scale(.9); }
-  .box.win { background:#ff9800; font-size:20px; font-weight:bold; color:#000; }
-  .win-text { font-size:18px; font-weight:bold; color:#4caf50; margin-top:12px; }
+  .app-header { padding: 20px 16px 6px; text-align: center; }
+  .app-header h1 { margin: 0 0 4px; font-size: 22px; color: var(--accent); }
+  .app-header p { margin: 0; color: var(--muted); font-size: 13px; }
 
-  .main-btn { position:fixed; bottom:15px; left:15px; right:15px; background:#4caf50; color:#fff; border:none; padding:15px; border-radius:10px; font-size:16px; font-weight:bold; cursor:pointer; box-shadow:0 -4px 10px rgba(0,0,0,.5); z-index:1000; }
-  .main-btn:disabled { background:#555; }
-  .hidden { display:none; }
+  /* ===== Табы категорий ===== */
+  .tabs {
+    position: sticky; top: 0; z-index: 50;
+    display: flex; gap: 8px; padding: 10px 16px; overflow-x: auto;
+    background: var(--bg-blur); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    flex: 0 0 auto; border: 1px solid var(--border); background: var(--surface); color: var(--muted);
+    padding: 9px 16px; border-radius: 999px; font-size: 14px; font-weight: 600; cursor: pointer;
+    transition: transform .15s ease, background .25s ease, color .25s ease, box-shadow .25s ease;
+  }
+  .tab.active { background: var(--accent); color: #fff; border-color: transparent; box-shadow: 0 6px 16px -6px var(--accent); }
+  .tab:active { transform: scale(.95); }
+
+  /* ===== Сетка карточек ===== */
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 8px 16px 0; }
+  @media (min-width: 560px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 8px;
+    display: flex; flex-direction: column;
+    animation: cardIn .45s cubic-bezier(.2,.8,.2,1) backwards;
+    animation-delay: calc(var(--i) * 50ms);
+    transition: transform .2s ease, box-shadow .2s ease;
+  }
+  .card h3 { margin: 8px 4px 2px; font-size: 14px; line-height: 1.25; min-height: 2.5em; }
+  .card .price { margin: 0 4px 8px; color: var(--accent); font-weight: 700; font-size: 15px; }
+  .card .ctl { margin-top: auto; }
+
+  /* ===== Картинки (маленькие, с lazy loading) ===== */
+  .thumb {
+    position: relative; aspect-ratio: 4 / 3; border-radius: 11px; overflow: hidden;
+    background: linear-gradient(100deg, var(--surface-2) 30%, var(--border) 50%, var(--surface-2) 70%);
+    background-size: 200% 100%; animation: shimmer 1.4s linear infinite;
+  }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0; transition: opacity .4s ease; }
+  .thumb img.ok { opacity: 1; }
+  .thumb .emo { display: grid; place-items: center; height: 100%; font-size: 36px; }
+
+  /* ===== Кнопки ===== */
+  .add-btn {
+    width: 100%; border: 0; border-radius: 10px; padding: 10px; background: var(--accent); color: #fff;
+    font-size: 14px; font-weight: 700; cursor: pointer;
+    transition: transform .15s ease, filter .2s ease, box-shadow .2s ease;
+  }
+  .add-btn:active { transform: scale(.95); }
+
+  .counter { display: flex; align-items: center; justify-content: space-between; background: var(--surface-2); border-radius: 10px; overflow: hidden; }
+  .count-btn {
+    width: 38px; height: 38px; border: 0; background: transparent; color: var(--accent);
+    font-size: 20px; font-weight: 700; cursor: pointer; transition: background .15s ease, transform .1s ease;
+  }
+  .count-btn:active { background: var(--accent-soft); transform: scale(.85); }
+  .count-text { font-size: 14px; font-weight: 700; animation: bump .25s ease; }
+
+  @media (hover: hover) {
+    .tab:hover { transform: translateY(-1px); color: var(--text); }
+    .tab.active:hover { color: #fff; }
+    .card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+    .add-btn:hover { filter: brightness(1.1); box-shadow: 0 8px 18px -8px var(--accent); }
+    .count-btn:hover { background: var(--accent-soft); }
+    .main-btn:not(:disabled):hover { filter: brightness(1.08); }
+  }
+
+  /* ===== Корзина ===== */
+  .cart-top { display: flex; align-items: center; padding: 14px 16px 0; }
+  .back-btn { background: none; border: 0; color: var(--accent); font-size: 15px; font-weight: 600; cursor: pointer; padding: 6px 0; transition: transform .15s; }
+  .back-btn:active { transform: translateX(-3px); }
+  .cart-title { text-align: center; padding: 4px 16px 0; }
+  .cart-title h1 { margin: 0 0 4px; font-size: 22px; color: var(--accent); }
+  .cart-title p { margin: 0; color: var(--muted); font-size: 13px; }
+
+  .cart-list { display: flex; flex-direction: column; gap: 10px; padding: 16px 16px 0; }
+  .cart-row {
+    display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 14px;
+    background: var(--surface); border: 1px solid var(--border);
+    animation: cardIn .35s ease backwards; transition: opacity .25s ease;
+  }
+  .cart-row.off { opacity: .45; }
+  .cart-row input[type=checkbox] { width: 22px; height: 22px; accent-color: var(--accent); flex: none; }
+  .cart-row .thumb { width: 56px; height: 56px; aspect-ratio: auto; flex: none; }
+  .cart-info { flex: 1; min-width: 0; }
+  .cart-info b { display: block; font-size: 14px; }
+  .cart-info span { color: var(--accent); font-size: 14px; font-weight: 700; }
+  .cart-row .counter { width: 104px; flex: none; }
+  .cart-row .count-btn { width: 32px; height: 32px; }
+  .empty { text-align: center; color: var(--muted); padding: 30px 0; }
+
+  .totals { text-align: center; padding: 18px 16px 0; }
+  .total-line { font-size: 20px; font-weight: 700; }
+  .old-price { color: var(--muted); text-decoration: line-through; font-size: 15px; margin-right: 8px; font-weight: 400; }
+  .discount-line { color: var(--ok); font-size: 14px; margin-top: 6px; }
+
+  /* ===== Игра ===== */
+  .game { margin: 20px 16px 0; padding: 16px; text-align: center; background: var(--surface); border: 2px dashed var(--accent); border-radius: 16px; }
+  .game h3 { margin: 0 0 4px; color: var(--accent); }
+  .game p { margin: 0 0 12px; color: var(--muted); font-size: 13px; }
+  .boxes { display: flex; justify-content: center; gap: 12px; }
+  .box {
+    width: 76px; height: 76px; border: 0; border-radius: 14px; background: var(--surface-2);
+    font-size: 38px; cursor: pointer; transition: transform .15s ease, background .2s ease;
+  }
+  .box:not(:disabled):active { transform: scale(.88); }
+  .box.dim { opacity: .35; }
+  .box.win { background: var(--accent); color: #fff; font-size: 20px; font-weight: 800; animation: pop .5s cubic-bezier(.2,1.4,.4,1); }
+  @media (hover: hover) { .box:not(:disabled):hover { transform: translateY(-4px) rotate(-4deg); } }
+  .win-text { margin-top: 12px; font-size: 17px; font-weight: 700; color: var(--ok); }
+
+  /* ===== Нижняя кнопка ===== */
+  .main-btn {
+    position: fixed; left: 16px; right: 16px; bottom: calc(14px + env(safe-area-inset-bottom));
+    z-index: 100; border: 0; border-radius: 14px; padding: 16px; background: var(--ok); color: #fff;
+    font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 10px 24px -10px rgba(0,0,0,.6);
+    transform: translateY(150%); transition: transform .35s cubic-bezier(.2,.9,.3,1), filter .2s, background .2s;
+  }
+  .main-btn.show { transform: translateY(0); }
+  .main-btn.show:active { transform: scale(.97); }
+  .main-btn:disabled { background: var(--surface-2); color: var(--muted); box-shadow: none; }
+
+  /* ===== Анимации ===== */
+  @keyframes cardIn   { from { opacity: 0; transform: translateY(14px) scale(.98); } to { opacity: 1; transform: none; } }
+  @keyframes screenIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @keyframes shimmer  { to { background-position: -200% 0; } }
+  @keyframes bump     { 40% { transform: scale(1.3); } }
+  @keyframes pop      { 0% { transform: scale(.4) rotate(-12deg); } 100% { transform: none; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  }
 </style>
 </head>
 <body>
 
-<div id="menu-screen">
-  <div class="header">
+<!-- ЭКРАН 1: МЕНЮ -->
+<div id="menu-screen" class="screen">
+  <div class="app-header">
     <h1>🍕 Пицца & Бургеры 🍔</h1>
     <p>Быстрая доставка твоего кайфа</p>
   </div>
-  <div class="list" id="menu-list"></div>
+  <nav class="tabs" id="tabs"></nav>
+  <section class="grid" id="grid"></section>
 </div>
 
-<div id="cart-screen" class="hidden">
-  <button class="back-btn" onclick="showMenu()">← В меню</button>
-  <div class="header"><h1>🛒 Твоя корзина</h1><p>Убери галочку, если не хочешь это блюдо</p></div>
-  <div class="list" id="cart-list"></div>
+<!-- ЭКРАН 2: КОРЗИНА -->
+<div id="cart-screen" class="screen hidden">
+  <div class="cart-top"><button class="back-btn" onclick="showMenu()">← В меню</button></div>
+  <div class="cart-title"><h1>🛒 Твоя корзина</h1><p>Убери галочку, если не хочешь это блюдо</p></div>
+  <div class="cart-list" id="cart-list"></div>
   <div class="game" id="game"></div>
-  <div class="total-line" id="total-line"></div>
-  <div class="discount-line" id="discount-line"></div>
+  <div class="totals">
+    <div class="total-line" id="total-line"></div>
+    <div class="discount-line" id="discount-line"></div>
+  </div>
 </div>
 
-<button id="main-btn" class="main-btn hidden" onclick="mainAction()"></button>
+<button id="main-btn" class="main-btn" onclick="mainAction()"></button>
 
 <script>
   const tg = window.Telegram && window.Telegram.WebApp;
   if (tg) { tg.ready(); tg.expand(); }
 
-  // ТЕСТОВЫЙ РЕЖИМ: true = играть можно сколько угодно.
-  // Перед показом заказчикам поменяй на false
-  const TEST_MODE = true;
+  // Тема: берём из Телеграма, иначе из настроек устройства
+  const scheme = (tg && tg.colorScheme) ||
+    (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+  document.documentElement.dataset.theme = scheme;
 
-  // === РАЗДЕЛЫ МЕНЮ ===
+  // ===== НАСТРОЙКИ =====
+  const TEST_MODE = true;       // true = играть можно сколько угодно. Перед показом заказчикам поставь false
+  const IMG_EXT = ".jpg.png";   // окончание файлов в папке images (если переименуешь в pizza.jpg, поставь ".jpg")
+
   const CATEGORIES = ["🍕 Пицца", "🍔 Бургеры", "🥤 Напитки"];
 
-  // === БЛЮДА. Фото лежит в папке images и называется так же, как id (например images/pizza.jpg)
-  // Новое блюдо нужно добавить и сюда, и в bot.js (в MENU) ===
   const products = [
     { id: "pizza",      cat: "🍕 Пицца",   emoji: "🍕", name: "Пепперони Премиум",   price: 450 },
     { id: "margarita",  cat: "🍕 Пицца",   emoji: "🍕", name: "Маргарита",           price: 390 },
     { id: "fourcheese", cat: "🍕 Пицца",   emoji: "🧀", name: "Четыре сыра",         price: 520 },
-
     { id: "burger",     cat: "🍔 Бургеры", emoji: "🍔", name: "Тройной Чизбургер",   price: 320 },
     { id: "classic",    cat: "🍔 Бургеры", emoji: "🍔", name: "Классический бургер", price: 250 },
     { id: "chicken",    cat: "🍔 Бургеры", emoji: "🍗", name: "Чикен бургер",        price: 280 },
-
     { id: "cola",       cat: "🥤 Напитки", emoji: "🥤", name: "Кола 0.5 л",          price: 90 },
     { id: "juice",      cat: "🥤 Напитки", emoji: "🧃", name: "Сок яблочный",        price: 100 },
     { id: "water",      cat: "🥤 Напитки", emoji: "💧", name: "Вода 0.5 л",          price: 60 },
     { id: "icetea",     cat: "🥤 Напитки", emoji: "🍹", name: "Холодный чай",        price: 110 }
   ];
 
-  // Возможные скидки. Чем чаще число в списке, тем чаще оно выпадает
   const PRIZES = [5, 5, 5, 5, 10, 10, 10, 15, 15, 20];
 
-  const count = {};
-  const checked = {};
+  // ===== СОСТОЯНИЕ =====
+  const $ = id => document.getElementById(id);
+  const count = {}, checked = {};
   products.forEach(p => { count[p.id] = 0; checked[p.id] = true; });
+
+  let activeCat = CATEGORIES[0];
+  let screen = "menu";
+  let openedBox = -1;
 
   const today = new Date().toDateString();
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem("gift") || "{}"); } catch (e) {}
   let discount = (saved.date === today && !TEST_MODE) ? saved.percent : null;
-  let openedBox = -1;
-  let screen = "menu";
 
-  function change(id, d) {
-    count[id] = Math.max(0, count[id] + d);
-    if (d > 0 && count[id] === 1) checked[id] = true;
-    render();
+  // ===== РАСЧЁТЫ =====
+  const allSum     = () => products.reduce((s, p) => s + p.price * count[p.id], 0);
+  const checkedSum = () => products.reduce((s, p) => s + (checked[p.id] ? p.price * count[p.id] : 0), 0);
+  const finalSum   = () => Math.round(checkedSum() * (1 - (discount || 0) / 100));
+
+  // ===== ШАБЛОНЫ =====
+  function thumbHTML(p) {
+    return `<div class="thumb"><img src="images/${p.id}${IMG_EXT}" alt="${p.name}"
+      width="160" height="120" loading="lazy" decoding="async"
+      onload="this.classList.add('ok')"
+      onerror="this.parentNode.innerHTML='<div class=emo>${p.emoji}</div>'"></div>`;
   }
-  function toggle(id) { checked[id] = !checked[id]; render(); }
-
-  function openBox(i) {
-    if (discount !== null) return;
-    discount = PRIZES[Math.floor(Math.random() * PRIZES.length)];
-    openedBox = i;
-    localStorage.setItem("gift", JSON.stringify({ date: today, percent: discount }));
-    render();
-  }
-
-  function allSum()     { return products.reduce((s, p) => s + p.price * count[p.id], 0); }
-  function checkedSum() { return products.reduce((s, p) => s + (checked[p.id] ? p.price * count[p.id] : 0), 0); }
-  function finalSum()   { return Math.round(checkedSum() * (1 - (discount || 0) / 100)); }
 
   function counterHTML(id) {
     return `<div class="counter">
@@ -138,95 +273,127 @@
     </div>`;
   }
 
-  // Фото блюда. Если файла нет, показываем смайлик
-  function pictureHTML(p) {
-    return `<img class="photo" src="images/${p.id}.jpg.png" alt="${p.name}"
-      onerror="this.outerHTML='<div class=product-emoji>${p.emoji}</div>'">`;
-  }
-
-  function cardHTML(p) {
-    return `<div class="product-card">
-      ${pictureHTML(p)}
-      <h3>${p.name}</h3>
-      <p class="price">${p.price} ₽</p>
-      ${count[p.id] === 0
-        ? `<button class="add-btn" onclick="change('${p.id}', 1)">В корзину</button>`
-        : counterHTML(p.id)}
-    </div>`;
-  }
-
-  function gameHTML() {
-    if (discount === null) {
-      return `<h3>🎁 Выиграй скидку!</h3>
-        <p>Открой одну коробку.${TEST_MODE ? "" : " Играть можно раз в день."}</p>
-        <div class="boxes">
-          <button class="box" onclick="openBox(0)">🎁</button>
-          <button class="box" onclick="openBox(1)">🎁</button>
-          <button class="box" onclick="openBox(2)">🎁</button>
-        </div>`;
-    }
-    if (openedBox >= 0) {
-      let boxes = "";
-      for (let i = 0; i < 3; i++) {
-        boxes += i === openedBox
-          ? `<button class="box win" disabled>−${discount}%</button>`
-          : `<button class="box" disabled style="opacity:.4">🎁</button>`;
-      }
-      return `<h3>🎉 Поздравляем!</h3><div class="boxes">${boxes}</div>
-        <div class="win-text">Твоя скидка: ${discount}%</div>`;
-    }
-    return `<h3>🎁 Игра на сегодня сыграна</h3>
-      <div class="win-text">Твоя скидка: ${discount}%</div>
-      <p style="margin-top:8px">Приходи завтра за новой!</p>`;
-  }
-
-  function render() {
-    document.getElementById("menu-list").innerHTML = CATEGORIES.map(c =>
-      `<h2 class="cat">${c}</h2>` +
-      products.filter(p => p.cat === c).map(cardHTML).join("")
+  // ===== МЕНЮ =====
+  function renderTabs() {
+    $("tabs").innerHTML = CATEGORIES.map((c, i) =>
+      `<button class="tab ${c === activeCat ? "active" : ""}" onclick="setCat(${i})">${c}</button>`
     ).join("");
+  }
 
+  function renderMenu() {
+    const list = products.filter(p => p.cat === activeCat);
+    $("grid").innerHTML = list.map((p, i) => `
+      <article class="card" style="--i:${i}">
+        ${thumbHTML(p)}
+        <h3>${p.name}</h3>
+        <p class="price">${p.price} ₽</p>
+        <div class="ctl" id="ctl-${p.id}"></div>
+      </article>`).join("");
+    list.forEach(p => updateCtl(p.id));
+  }
+
+  function updateCtl(id) {
+    const el = $("ctl-" + id);
+    if (!el) return;
+    el.innerHTML = count[id] === 0
+      ? `<button class="add-btn" onclick="change('${id}', 1)">В корзину</button>`
+      : counterHTML(id);
+  }
+
+  function setCat(i) {
+    activeCat = CATEGORIES[i];
+    renderTabs();
+    renderMenu();
+    const t = document.querySelector(".tab.active");
+    if (t) t.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+  }
+
+  // ===== КОРЗИНА =====
+  function renderCart() {
     const inCart = products.filter(p => count[p.id] > 0);
-    document.getElementById("cart-list").innerHTML = inCart.map(p => `
+    $("cart-list").innerHTML = inCart.length ? inCart.map(p => `
       <div class="cart-row ${checked[p.id] ? "" : "off"}">
         <input type="checkbox" ${checked[p.id] ? "checked" : ""} onchange="toggle('${p.id}')">
-        <div class="cart-info"><b>${p.emoji} ${p.name}</b><span>${p.price * count[p.id]} ₽</span></div>
+        ${thumbHTML(p)}
+        <div class="cart-info"><b>${p.name}</b><span>${p.price * count[p.id]} ₽</span></div>
         ${counterHTML(p.id)}
-      </div>`).join("");
-
-    document.getElementById("game").innerHTML = gameHTML();
+      </div>`).join("") : `<div class="empty">Корзина пуста 🤷</div>`;
 
     const old = checkedSum(), now = finalSum();
-    document.getElementById("total-line").innerHTML = discount
+    $("total-line").innerHTML = discount
       ? `Итого: <span class="old-price">${old} ₽</span>${now} ₽`
       : `Итого: ${now} ₽`;
-    document.getElementById("discount-line").innerText = discount
-      ? `Скидка ${discount}% — ты экономишь ${old - now} ₽` : "";
+    $("discount-line").innerText = discount ? `Скидка ${discount}% — ты экономишь ${old - now} ₽` : "";
+  }
 
-    const btn = document.getElementById("main-btn");
+  function renderGame() {
+    let html;
+    if (discount === null) {
+      html = `<h3>🎁 Выиграй скидку!</h3>
+        <p>Открой одну коробку.${TEST_MODE ? "" : " Играть можно раз в день."}</p>
+        <div class="boxes">${[0, 1, 2].map(i => `<button class="box" onclick="openBox(${i})">🎁</button>`).join("")}</div>`;
+    } else if (openedBox >= 0) {
+      html = `<h3>🎉 Поздравляем!</h3>
+        <div class="boxes">${[0, 1, 2].map(i => i === openedBox
+          ? `<button class="box win" disabled>−${discount}%</button>`
+          : `<button class="box dim" disabled>🎁</button>`).join("")}</div>
+        <div class="win-text">Твоя скидка: ${discount}%</div>`;
+    } else {
+      html = `<h3>🎁 Игра на сегодня сыграна</h3>
+        <div class="win-text">Твоя скидка: ${discount}%</div>
+        <p style="margin-top:8px">Приходи завтра за новой!</p>`;
+    }
+    $("game").innerHTML = html;
+  }
+
+  function openBox(i) {
+    if (discount !== null) return;
+    discount = PRIZES[Math.floor(Math.random() * PRIZES.length)];
+    openedBox = i;
+    localStorage.setItem("gift", JSON.stringify({ date: today, percent: discount }));
+    renderGame(); renderCart(); updateBar();
+  }
+
+  // ===== ДЕЙСТВИЯ =====
+  function change(id, d) {
+    count[id] = Math.max(0, count[id] + d);
+    if (d > 0 && count[id] === 1) checked[id] = true;
+    updateCtl(id);
+    if (screen === "cart") renderCart();
+    updateBar();
+  }
+
+  function toggle(id) {
+    checked[id] = !checked[id];
+    renderCart(); updateBar();
+  }
+
+  function updateBar() {
+    const btn = $("main-btn");
     if (screen === "menu") {
-      btn.classList.toggle("hidden", allSum() === 0);
+      btn.classList.toggle("show", allSum() > 0);
       btn.disabled = false;
       btn.innerText = `🛒 Корзина (${allSum()} ₽)`;
     } else {
-      btn.classList.remove("hidden");
+      btn.classList.add("show");
       btn.disabled = checkedSum() === 0;
-      btn.innerText = `✅ Оформить заказ (${now} ₽)`;
+      btn.innerText = `✅ Оформить заказ (${finalSum()} ₽)`;
     }
   }
 
   function showCart() {
     screen = "cart";
-    document.getElementById("menu-screen").classList.add("hidden");
-    document.getElementById("cart-screen").classList.remove("hidden");
+    $("menu-screen").classList.add("hidden");
+    $("cart-screen").classList.remove("hidden");
     window.scrollTo(0, 0);
-    render();
+    renderGame(); renderCart(); updateBar();
   }
+
   function showMenu() {
     screen = "menu";
-    document.getElementById("cart-screen").classList.add("hidden");
-    document.getElementById("menu-screen").classList.remove("hidden");
-    render();
+    $("cart-screen").classList.add("hidden");
+    $("menu-screen").classList.remove("hidden");
+    renderMenu(); updateBar();
   }
 
   function mainAction() { screen === "menu" ? showCart() : sendOrder(); }
@@ -241,7 +408,10 @@
     else alert("Открой приложение через бота в Телеграме!");
   }
 
-  render();
+  // ===== СТАРТ =====
+  renderTabs();
+  renderMenu();
+  updateBar();
 </script>
 </body>
 </html>
