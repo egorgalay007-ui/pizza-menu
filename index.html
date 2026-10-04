@@ -1,114 +1,157 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Доставка Еды</title>
-    <script src="https://telegram.org"></script>
-    <style>
-        body { background-color: #121212; color: #ffffff; font-family: Arial, sans-serif; margin: 0; padding: 15px; padding-bottom: 90px; text-align: center; }
-        .header h1 { margin-bottom: 5px; color: #ff9800; }
-        .header p { color: #888; margin-top: 0; font-size: 14px; }
-        .menu-container { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; }
-        .product-card { background-color: #1e1e1e; border-radius: 12px; padding: 15px; border: 1px solid #2c2c2c; }
-        .product-emoji { font-size: 40px; margin-bottom: 10px; }
-        .price { color: #4caf50; font-weight: bold; font-size: 16px; margin: 8px 0; }
-        .add-btn { background-color: #ff9800; color: black; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; font-size: 14px; }
-        .counter-container { display: flex; justify-content: space-between; align-items: center; background-color: #2c2c2c; border-radius: 8px; padding: 2px; }
-        .count-btn { background-color: #ff9800; color: black; border: none; padding: 10px 20px; font-weight: bold; font-size: 16px; cursor: pointer; border-radius: 6px; }
-        .count-text { font-weight: bold; color: #fff; font-size: 16px; }
-        .order-main-btn { position: fixed; bottom: 15px; left: 15px; right: 15px; width: calc(100% - 30px); background-color: #4caf50; color: white; border: none; padding: 15px; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 -4px 10px rgba(0,0,0,0.5); z-index: 1000; display: none; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Доставка Еды</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  body { background:#121212; color:#fff; font-family:'Segoe UI',Roboto,sans-serif; margin:0; padding:15px; padding-bottom:90px; text-align:center; }
+  .header h1 { margin-bottom:5px; color:#ff9800; }
+  .header p { color:#888; margin-top:0; font-size:14px; }
+  .list { display:flex; flex-direction:column; gap:15px; margin-top:20px; }
+  .product-card { background:#1e1e1e; border-radius:12px; padding:15px; border:1px solid #2c2c2c; box-shadow:0 4px 6px rgba(0,0,0,.3); }
+  .product-emoji { font-size:40px; margin-bottom:10px; }
+  .product-card h3 { margin:5px 0; font-size:18px; }
+  .price { color:#4caf50; font-weight:bold; font-size:16px; margin:8px 0; }
+  .add-btn { background:#ff9800; color:#000; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer; width:100%; font-size:14px; }
+  .counter { display:flex; justify-content:space-between; align-items:center; background:#2c2c2c; border-radius:8px; overflow:hidden; }
+  .count-btn { background:#ff9800; color:#000; border:none; padding:10px 15px; font-weight:bold; font-size:16px; cursor:pointer; }
+  .count-text { font-weight:bold; }
+
+  /* корзина */
+  .cart-row { display:flex; align-items:center; gap:12px; background:#1e1e1e; border:1px solid #2c2c2c; border-radius:12px; padding:12px; text-align:left; }
+  .cart-row.off { opacity:.45; }
+  .cart-row input[type=checkbox] { width:24px; height:24px; accent-color:#ff9800; flex-shrink:0; }
+  .cart-info { flex:1; }
+  .cart-info b { display:block; font-size:16px; }
+  .cart-info span { color:#4caf50; font-size:14px; }
+  .cart-row .counter { width:110px; flex-shrink:0; }
+  .cart-row .count-btn { padding:8px 12px; }
+  .back-btn { background:none; border:none; color:#ff9800; font-size:16px; cursor:pointer; float:left; }
+  .total-line { margin-top:20px; font-size:20px; font-weight:bold; }
+
+  .main-btn { position:fixed; bottom:15px; left:15px; right:15px; background:#4caf50; color:#fff; border:none; padding:15px; border-radius:10px; font-size:16px; font-weight:bold; cursor:pointer; box-shadow:0 -4px 10px rgba(0,0,0,.5); z-index:1000; }
+  .main-btn:disabled { background:#555; }
+  .hidden { display:none; }
+</style>
 </head>
 <body>
 
-    <div class="header">
-        <h1>🍕 Пицца & Бургеры 🍔</h1>
-        <p>Быстрая доставка твоего кайфа</p>
-    </div>
+<!-- ЭКРАН 1: МЕНЮ -->
+<div id="menu-screen">
+  <div class="header">
+    <h1>🍕 Пицца & Бургеры 🍔</h1>
+    <p>Быстрая доставка твоего кайфа</p>
+  </div>
+  <div class="list" id="menu-list"></div>
+</div>
 
-    <div class="menu-container">
-        <div class="product-card">
-            <div class="product-emoji">🍕</div>
-            <h3>Пепперони Премиум</h3>
-            <p class="price">450 ₽</p>
-            <div id="pizza-controls">
-                <button class="add-btn" onclick="addFirst('pizza')">В корзину</button>
-            </div>
-        </div>
+<!-- ЭКРАН 2: КОРЗИНА -->
+<div id="cart-screen" class="hidden">
+  <button class="back-btn" onclick="showMenu()">← В меню</button>
+  <div class="header"><h1>🛒 Твоя корзина</h1><p>Убери галочку, если не хочешь это блюдо</p></div>
+  <div class="list" id="cart-list"></div>
+  <div class="total-line">Итого: <span id="cart-total">0</span> ₽</div>
+</div>
 
-        <div class="product-card">
-            <div class="product-emoji">🍔</div>
-            <h3>Тройной Чизбургер</h3>
-            <p class="price">320 ₽</p>
-            <div id="burger-controls">
-                <button class="add-btn" onclick="addFirst('burger')">В корзину</button>
-            </div>
-        </div>
-    </div>
+<button id="main-btn" class="main-btn hidden" onclick="mainAction()"></button>
 
-    <button id="order-btn" class="order-main-btn" onclick="sendOrder()">
-        🛒 Посмотреть заказ (<span id="total-price">0</span> ₽)
-    </button>
+<script>
+  const tg = window.Telegram && window.Telegram.WebApp;
+  if (tg) { tg.ready(); tg.expand(); }
 
-    <script>
-        let tg = window.Telegram.WebApp;
-        tg.expand();
+  // === ТУТ МЕНЮ. Чтобы добавить блюдо, скопируй строку и поменяй ===
+  const products = [
+    { id: "pizza",  emoji: "🍕", name: "Пепперони Премиум", price: 450 },
+    { id: "burger", emoji: "🍔", name: "Тройной Чизбургер", price: 320 }
+  ];
 
-        const products = {
-            pizza: { name: "Пепперони Премиум", price: 450, count: 0 },
-            burger: { name: "Тройной Чизбургер", price: 320, count: 0 }
-        };
+  const count = {};    // сколько штук каждого блюда
+  const checked = {};  // стоит ли галочка
+  products.forEach(p => { count[p.id] = 0; checked[p.id] = true; });
 
-        function addFirst(item) {
-            products[item].count = 1;
-            renderControls(item);
-            renderOrderButton();
-        }
+  let screen = "menu";
 
-        function changeQuantity(item, delta) {
-            products[item].count += delta;
-            if (products[item].count <= 0) {
-                products[item].count = 0;
-                document.getElementById(item + '-controls').innerHTML = `<button class="add-btn" onclick="addFirst('${item}')">В корзину</button>`;
-            } else {
-                document.getElementById(item + '-count').innerText = products[item].count + ' шт';
-            }
-            renderOrderButton();
-        }
+  function change(id, d) {
+    count[id] = Math.max(0, count[id] + d);
+    if (d > 0 && count[id] === 1) checked[id] = true;
+    render();
+  }
+  function toggle(id) { checked[id] = !checked[id]; render(); }
 
-        function renderControls(item) {
-            document.getElementById(item + '-controls').innerHTML = `
-                <div class="counter-container">
-                    <button class="count-btn" onclick="changeQuantity('${item}', -1)">-</button>
-                    <span class="count-text" id="${item}-count">1 шт</span>
-                    <button class="count-btn" onclick="changeQuantity('${item}', 1)">+</button>
-                </div>
-            `;
-        }
+  function allSum()     { return products.reduce((s, p) => s + p.price * count[p.id], 0); }
+  function checkedSum() { return products.reduce((s, p) => s + (checked[p.id] ? p.price * count[p.id] : 0), 0); }
 
-        function renderOrderButton() {
-            const btn = document.getElementById("order-btn");
-            const priceSpan = document.getElementById("total-price");
-            let total = (products.pizza.count * products.pizza.price) + (products.burger.count * products.burger.price);
-            priceSpan.innerText = total;
-            if (total > 0) {
-                btn.style.display = "block";
-            } else {
-                btn.style.display = "none";
-            }
-        }
+  function counterHTML(id) {
+    return `<div class="counter">
+      <button class="count-btn" onclick="change('${id}', -1)">−</button>
+      <span class="count-text">${count[id]} шт</span>
+      <button class="count-btn" onclick="change('${id}', 1)">+</button>
+    </div>`;
+  }
 
-        function sendOrder() {
-            let result = [];
-            for (let key in products) {
-                if (products[key].count > 0) {
-                    result.push({ name: products[key].name, count: products[key].count, price: products[key].price });
-                }
-            }
-            tg.sendData(JSON.stringify(result));
-            tg.close();
-        }
-    </script>
+  function render() {
+    // меню
+    document.getElementById("menu-list").innerHTML = products.map(p => `
+      <div class="product-card">
+        <div class="product-emoji">${p.emoji}</div>
+        <h3>${p.name}</h3>
+        <p class="price">${p.price} ₽</p>
+        ${count[p.id] === 0
+          ? `<button class="add-btn" onclick="change('${p.id}', 1)">В корзину</button>`
+          : counterHTML(p.id)}
+      </div>`).join("");
+
+    // корзина
+    const inCart = products.filter(p => count[p.id] > 0);
+    document.getElementById("cart-list").innerHTML = inCart.map(p => `
+      <div class="cart-row ${checked[p.id] ? "" : "off"}">
+        <input type="checkbox" ${checked[p.id] ? "checked" : ""} onchange="toggle('${p.id}')">
+        <div class="cart-info"><b>${p.emoji} ${p.name}</b><span>${p.price * count[p.id]} ₽</span></div>
+        ${counterHTML(p.id)}
+      </div>`).join("");
+    document.getElementById("cart-total").innerText = checkedSum();
+
+    // нижняя кнопка
+    const btn = document.getElementById("main-btn");
+    if (screen === "menu") {
+      btn.classList.toggle("hidden", allSum() === 0);
+      btn.disabled = false;
+      btn.innerText = `🛒 Корзина (${allSum()} ₽)`;
+    } else {
+      btn.classList.remove("hidden");
+      btn.disabled = checkedSum() === 0;
+      btn.innerText = `✅ Оформить заказ (${checkedSum()} ₽)`;
+    }
+  }
+
+  function showCart() {
+    screen = "cart";
+    document.getElementById("menu-screen").classList.add("hidden");
+    document.getElementById("cart-screen").classList.remove("hidden");
+    window.scrollTo(0, 0);
+    render();
+  }
+  function showMenu() {
+    screen = "menu";
+    document.getElementById("cart-screen").classList.add("hidden");
+    document.getElementById("menu-screen").classList.remove("hidden");
+    render();
+  }
+
+  function mainAction() { screen === "menu" ? showCart() : sendOrder(); }
+
+  function sendOrder() {
+    const order = products
+      .filter(p => count[p.id] > 0 && checked[p.id])
+      .map(p => ({ name: p.name, count: count[p.id], price: p.price }));
+    if (order.length === 0) return;
+    if (tg) { tg.sendData(JSON.stringify(order)); tg.close(); }
+    else alert("Открой приложение через бота в Телеграме!");
+  }
+
+  render();
+</script>
 </body>
 </html>
