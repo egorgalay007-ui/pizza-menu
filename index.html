@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Доставка Еды</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Подключаем специальный скрипт Telegram, чтобы сайт понимал, что он внутри приложения -->
+    <script src="https://telegram.org"></script>
+</head>
+<body>
+    <div class="header">
+        <h1>🍕 Пицца & Бургеры 🍔</h1>
+        <p>Быстрая доставка твоего кайфа</p>
+    </div>
+
+    <div class="menu-container">
+        <!-- Товар 1 -->
+        <div class="product-card">
+            <div class="product-emoji">🍕</div>
+            <h3>Пепперони Премиум</h3>
+            <p class="price">450 ₽</p>
+            <button class="add-btn" onclick="tg.showAlert('Пицца добавлена!')">В корзину</button>
+        </div>
+
+        <!-- Товар 2 -->
+        <div class="product-card">
+            <div class="product-emoji">🍔</div>
+            <h3>Тройной Чизбургер</h3>
+            <p class="price">320 ₽</p>
+            <button class="add-btn" onclick="tg.showAlert('Бургер добавлен!')">В корзину</button>
+        </div>
+    </div>
+
+    <script>
+        // Инициализируем Telegram Web App
+        let tg = window.Telegram.WebApp;
+        tg.expand(); // Расширяем приложение на весь экран телефона
+    </script>
+</body>
+</html>
