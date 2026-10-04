@@ -1,0 +1,7 @@
+{
+  "name": "pizza-menu",
+  "private": true,
+  "dependencies": {
+    "grammy": "^1.30.0"
+  }
+}

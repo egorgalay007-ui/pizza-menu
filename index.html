@@ -398,15 +398,31 @@
 
   function mainAction() { screen === "menu" ? showCart() : sendOrder(); }
 
-  function sendOrder() {
-    const items = products
-      .filter(p => count[p.id] > 0 && checked[p.id])
-      .map(p => ({ id: p.id, count: count[p.id] }));
-    if (items.length === 0) return;
-    const data = { items: items, discount: discount || 0 };
-    if (tg) { tg.sendData(JSON.stringify(data)); tg.close(); }
-    else alert("Открой приложение через бота в Телеграме!");
+  async function sendOrder() {
+  const items = products
+    .filter(p => count[p.id] > 0 && checked[p.id])
+    .map(p => ({ id: p.id, count: count[p.id] }));
+  if (items.length === 0) return;
+
+  if (!tg || !tg.initData) { alert("Открой приложение через бота в Телеграме!"); return; }
+
+  const btn = $("main-btn");
+  btn.disabled = true;
+  btn.innerText = "Отправляем...";
+
+  try {
+    const r = await fetch("/api/order", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ initData: tg.initData, items, discount: discount || 0 })
+    });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    tg.close();
+  } catch (e) {
+    tg.showAlert("Не удалось отправить заказ. Попробуй ещё раз.");
+    updateBar();
   }
+}
 
   // ===== СТАРТ =====
   renderTabs();
