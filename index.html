@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Доставка Еды</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Подключаем специальный скрипт Telegram, чтобы сайт понимал, что он внутри приложения -->
     <script src="https://telegram.org"></script>
 </head>
 <body>
@@ -15,27 +14,101 @@
     </div>
 
     <div class="menu-container">
-        <!-- Товар 1 -->
-        <div class="product-card">
+        <!-- Пицца -->
+        <div class="product-card" id="pizza-card">
             <div class="product-emoji">🍕</div>
             <h3>Пепперони Премиум</h3>
             <p class="price">450 ₽</p>
-            <button class="add-btn" onclick="tg.showAlert('Пицца добавлена!')">В корзину</button>
+            <div class="card-bottom" id="pizza-controls">
+                <button class="add-btn" onclick="changeCount('pizza', 1)">В корзину</button>
+            </div>
         </div>
 
-        <!-- Товар 2 -->
-        <div class="product-card">
+        <!-- Бургер -->
+        <div class="product-card" id="burger-card">
             <div class="product-emoji">🍔</div>
             <h3>Тройной Чизбургер</h3>
             <p class="price">320 ₽</p>
-            <button class="add-btn" onclick="tg.showAlert('Бургер добавлен!')">В корзину</button>
+            <div class="card-bottom" id="burger-controls">
+                <button class="add-btn" onclick="changeCount('burger', 1)">В корзину</button>
+            </div>
         </div>
     </div>
 
+    <!-- Фиксированная кнопка заказа снизу экрана -->
+    <button id="order-btn" class="order-main-btn" onclick="sendOrder()">
+        🛒 Посмотреть заказ (<span id="total-price">0</span> ₽)
+    </button>
+
     <script>
-        // Инициализируем Telegram Web App
         let tg = window.Telegram.WebApp;
-        tg.expand(); // Расширяем приложение на весь экран телефона
+        tg.expand();
+
+        // База данных товаров для расчетов
+        const products = {
+            pizza: { name: "Пепперони Премиум", price: 450, count: 0 },
+            burger: { name: "Тройной Чизбургер", price: 320, count: 0 }
+        };
+
+        // Функция изменения количества товаров
+        function changeCount(item, delta) {
+            products[item].count += delta;
+            if (products[item].count < 0) products[item].count = 0;
+
+            updateCard(item);
+            updateOrderButton();
+        }
+
+        // Обновление внешнего вида карточки товара
+        function updateCard(item) {
+            const controlsDiv = document.getElementById(`${item}-controls`);
+            const count = products[item].count;
+
+            if (count === 0) {
+                controlsDiv.innerHTML = `<button class="add-btn" onclick="changeCount('${item}', 1)">В корзину</button>`;
+            } else {
+                controlsDiv.innerHTML = `
+                    <div class="counter-container">
+                        <button class="count-btn" onclick="changeCount('${item}', -1)">-</button>
+                        <span class="count-text">${count} шт</span>
+                        <button class="count-btn" onclick="changeCount('${item}', 1)">+</button>
+                    </div>
+                `;
+            }
+        }
+
+        // Обновление нижней кнопки заказа
+        function updateOrderButton() {
+            const btn = document.getElementById("order-btn");
+            const priceSpan = document.getElementById("total-price");
+            
+            let totalPrice = (products.pizza.count * products.pizza.price) + (products.burger.count * products.burger.price);
+            priceSpan.innerText = totalPrice;
+
+            if (totalPrice > 0) {
+                btn.classList.add("visible");
+            } else {
+                btn.classList.remove("visible");
+            }
+        }
+
+        // Функция отправки заказа в Telegram-бот
+        function sendOrder() {
+            let orderList = [];
+            for (let key in products) {
+                if (products[key].count > 0) {
+                    orderList.push({
+                        name: products[key].name,
+                        count: products[key].count,
+                        price: products[key].price
+                    });
+                }
+            }
+
+            // Упаковываем данные и отправляем боту через встроенный метод Telegram
+            tg.sendData(JSON.stringify(orderList));
+            tg.close(); // Закрываем мини-приложение после отправки
+        }
     </script>
 </body>
 </html>
