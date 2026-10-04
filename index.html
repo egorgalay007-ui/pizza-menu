@@ -6,90 +6,114 @@
     <title>Доставка Еды</title>
     <script src="https://telegram.org"></script>
     <style>
-        body { background-color: #121212; color: #ffffff; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 15px; padding-bottom: 80px; text-align: center; }
+        body { background-color: #121212; color: #ffffff; font-family: Arial, sans-serif; margin: 0; padding: 15px; padding-bottom: 90px; text-align: center; }
         .header h1 { margin-bottom: 5px; color: #ff9800; }
         .header p { color: #888; margin-top: 0; font-size: 14px; }
         .menu-container { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; }
         .product-card { background-color: #1e1e1e; border-radius: 12px; padding: 15px; border: 1px solid #2c2c2c; }
         .product-emoji { font-size: 40px; margin-bottom: 10px; }
         .price { color: #4caf50; font-weight: bold; font-size: 16px; margin: 8px 0; }
-        .add-btn { background-color: #ff9800; color: black; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; }
-        .counter-container { display: flex; justify-content: space-between; align-items: center; background-color: #2c2c2c; border-radius: 8px; overflow: hidden; }
-        .count-btn { background-color: #ff9800; color: black; border: none; padding: 10px 15px; font-weight: bold; font-size: 16px; cursor: pointer; }
-        .count-text { font-weight: bold; color: #fff; }
-        .order-main-btn { position: fixed; bottom: -100px; left: 15px; right: 15px; width: calc(100% - 30px); background-color: #4caf50; color: white; border: none; padding: 15px; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; transition: bottom 0.3s ease; box-shadow: 0 -4px 10px rgba(0,0,0,0.5); z-index: 1000; }
-        .order-main-btn.visible { bottom: 15px; }
+        .add-btn { background-color: #ff9800; color: black; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; font-size: 14px; }
+        .counter-container { display: flex; justify-content: space-between; align-items: center; background-color: #2c2c2c; border-radius: 8px; padding: 2px; }
+        .count-btn { background-color: #ff9800; color: black; border: none; padding: 10px 20px; font-weight: bold; font-size: 16px; cursor: pointer; border-radius: 6px; }
+        .count-text { font-weight: bold; color: #fff; font-size: 16px; }
+        .order-main-btn { position: fixed; bottom: -100px; left: 15px; right: 15px; width: calc(100% - 30px); background-color: #4caf50; color: white; border: none; padding: 15px; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; transition: bottom 0.3s ease; box-shadow: 0 -4px 10px rgba(0,0,0,0.5); z-index: 1000; display: none; }
     </style>
 </head>
 <body>
+
     <div class="header">
         <h1>🍕 Пицца & Бургеры 🍔</h1>
         <p>Быстрая доставка твоего кайфа</p>
     </div>
+
     <div class="menu-container">
-        <div class="product-card" id="pizza-card">
+        <!-- Пицца -->
+        <div class="product-card">
             <div class="product-emoji">🍕</div>
             <h3>Пепперони Премиум</h3>
             <p class="price">450 ₽</p>
-            <div class="card-bottom" id="pizza-controls">
-                <button class="add-btn" onclick="changeCount('pizza', 1)">В корзину</button>
+            <div id="pizza-controls">
+                <button class="add-btn" onclick="addFirst('pizza')">В корзину</button>
             </div>
         </div>
-        <div class="product-card" id="burger-card">
+
+        <!-- Бургер -->
+        <div class="product-card">
             <div class="product-emoji">🍔</div>
             <h3>Тройной Чизбургер</h3>
             <p class="price">320 ₽</p>
-            <div class="card-bottom" id="burger-controls">
-                <button class="add-btn" onclick="changeCount('burger', 1)">В корзину</button>
+            <div id="burger-controls">
+                <button class="add-btn" onclick="addFirst('burger')">В корзину</button>
             </div>
         </div>
     </div>
+
+    <!-- Кнопка заказа -->
     <button id="order-btn" class="order-main-btn" onclick="sendOrder()">
         🛒 Посмотреть заказ (<span id="total-price">0</span> ₽)
     </button>
+
     <script>
         let tg = window.Telegram.WebApp;
         tg.expand();
+
         const products = {
             pizza: { name: "Пепперони Премиум", price: 450, count: 0 },
             burger: { name: "Тройной Чизбургер", price: 320, count: 0 }
         };
-        function changeCount(item, delta) {
+
+        function addFirst(item) {
+            products[item].count = 1;
+            renderControls(item);
+            renderOrderButton();
+        }
+
+        function changeQuantity(item, delta) {
             products[item].count += delta;
-            if (products[item].count < 0) products[item].count = 0;
-            updateCard(item);
-            updateOrderButton();
-        }
-        function updateCard(item) {
-            const controlsDiv = document.getElementById(`${item}-controls`);
-            const count = products[item].count;
-            if (count === 0) {
-                controlsDiv.innerHTML = `<button class="add-btn" onclick="changeCount('${item}', 1)">В корзину</button>`;
+            if (products[item].count <= 0) {
+                products[item].count = 0;
+                document.getElementById(item + '-controls').innerHTML = `<button class="add-btn" onclick="addFirst('${item}')">В корзину</button>`;
             } else {
-                controlsDiv.innerHTML = `
-                    <div class="counter-container">
-                        <button class="count-btn" onclick="changeCount('${item}', -1)">-</button>
-                        <span class="count-text">${count} шт</span>
-                        <button class="count-btn" onclick="changeCount('${item}', 1)">+</button>
-                    </div>
-                `;
+                document.getElementById(item + '-count').innerText = products[item].count + ' шт';
             }
+            renderOrderButton();
         }
-        function updateOrderButton() {
+
+        function renderControls(item) {
+            document.getElementById(item + '-controls').innerHTML = `
+                <div class="counter-container">
+                    <button class="count-btn" onclick="changeQuantity('${item}', -1)">-</button>
+                    <span class="count-text" id="${item}-count">1 шт</span>
+                    <button class="count-btn" onclick="changeQuantity('${item}', 1)">+</button>
+                </div>
+            `;
+        }
+
+        function renderOrderButton() {
             const btn = document.getElementById("order-btn");
             const priceSpan = document.getElementById("total-price");
-            let totalPrice = (products.pizza.count * products.pizza.price) + (products.burger.count * products.burger.price);
-            priceSpan.innerText = totalPrice;
-            if (totalPrice > 0) { btn.classList.add("visible"); } else { btn.classList.remove("visible"); }
+            
+            let total = (products.pizza.count * products.pizza.price) + (products.burger.count * products.burger.price);
+            priceSpan.innerText = total;
+
+            if (total > 0) {
+                btn.style.display = "block";
+                setTimeout(() => { btn.style.bottom = "15px"; }, 10);
+            } else {
+                btn.style.bottom = "-100px";
+                setTimeout(() => { btn.style.display = "none"; }, 300);
+            }
         }
+
         function sendOrder() {
-            let orderList = [];
+            let result = [];
             for (let key in products) {
                 if (products[key].count > 0) {
-                    orderList.push({ name: products[key].name, count: products[key].count, price: products[key].price });
+                    result.push({ name: products[key].name, count: products[key].count, price: products[key].price });
                 }
             }
-            tg.sendData(JSON.stringify(orderList));
+            tg.sendData(JSON.stringify(result));
             tg.close();
         }
     </script>
