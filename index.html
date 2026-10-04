@@ -140,7 +140,7 @@
 
   // Фото блюда. Если файла нет, показываем смайлик
   function pictureHTML(p) {
-    return `<img class="photo" src="images/${p.id}.jpg" alt="${p.name}"
+    return `<img class="photo" src="images/${p.id}.jpg.png" alt="${p.name}"
       onerror="this.outerHTML='<div class=product-emoji>${p.emoji}</div>'">`;
   }
 
