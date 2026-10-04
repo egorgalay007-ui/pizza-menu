@@ -10,8 +10,10 @@
   .header h1 { margin-bottom:5px; color:#ff9800; }
   .header p { color:#888; margin-top:0; font-size:14px; }
   .list { display:flex; flex-direction:column; gap:15px; margin-top:20px; }
+  .cat { text-align:left; color:#ff9800; margin:15px 0 0; font-size:22px; }
   .product-card { background:#1e1e1e; border-radius:12px; padding:15px; border:1px solid #2c2c2c; box-shadow:0 4px 6px rgba(0,0,0,.3); }
   .product-emoji { font-size:40px; margin-bottom:10px; }
+  .photo { width:100%; height:180px; object-fit:cover; border-radius:10px; margin-bottom:8px; }
   .product-card h3 { margin:5px 0; font-size:18px; }
   .price { color:#4caf50; font-weight:bold; font-size:16px; margin:8px 0; }
   .add-btn { background:#ff9800; color:#000; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer; width:100%; font-size:14px; }
@@ -32,7 +34,6 @@
   .old-price { color:#888; text-decoration:line-through; font-size:16px; margin-right:8px; }
   .discount-line { color:#ff9800; font-size:15px; margin-top:6px; }
 
-  /* игра */
   .game { margin-top:25px; background:#1e1e1e; border:2px dashed #ff9800; border-radius:12px; padding:15px; }
   .game h3 { margin:0 0 5px; color:#ff9800; }
   .game p { margin:0 0 12px; color:#aaa; font-size:14px; }
@@ -49,7 +50,6 @@
 </head>
 <body>
 
-<!-- ЭКРАН 1: МЕНЮ -->
 <div id="menu-screen">
   <div class="header">
     <h1>🍕 Пицца & Бургеры 🍔</h1>
@@ -58,14 +58,11 @@
   <div class="list" id="menu-list"></div>
 </div>
 
-<!-- ЭКРАН 2: КОРЗИНА -->
 <div id="cart-screen" class="hidden">
   <button class="back-btn" onclick="showMenu()">← В меню</button>
   <div class="header"><h1>🛒 Твоя корзина</h1><p>Убери галочку, если не хочешь это блюдо</p></div>
   <div class="list" id="cart-list"></div>
-
   <div class="game" id="game"></div>
-
   <div class="total-line" id="total-line"></div>
   <div class="discount-line" id="discount-line"></div>
 </div>
@@ -76,27 +73,42 @@
   const tg = window.Telegram && window.Telegram.WebApp;
   if (tg) { tg.ready(); tg.expand(); }
 
-  // === МЕНЮ. Чтобы добавить блюдо, скопируй строку и поменяй ===
-  // (то же самое блюдо нужно добавить и в bot.js, в список MENU)
+  // ТЕСТОВЫЙ РЕЖИМ: true = играть можно сколько угодно.
+  // Перед показом заказчикам поменяй на false
+  const TEST_MODE = true;
+
+  // === РАЗДЕЛЫ МЕНЮ ===
+  const CATEGORIES = ["🍕 Пицца", "🍔 Бургеры", "🥤 Напитки"];
+
+  // === БЛЮДА. Фото лежит в папке images и называется так же, как id (например images/pizza.jpg)
+  // Новое блюдо нужно добавить и сюда, и в bot.js (в MENU) ===
   const products = [
-    { id: "pizza",  emoji: "🍕", name: "Пепперони Премиум", price: 450 },
-    { id: "burger", emoji: "🍔", name: "Тройной Чизбургер", price: 320 }
+    { id: "pizza",      cat: "🍕 Пицца",   emoji: "🍕", name: "Пепперони Премиум",   price: 450 },
+    { id: "margarita",  cat: "🍕 Пицца",   emoji: "🍕", name: "Маргарита",           price: 390 },
+    { id: "fourcheese", cat: "🍕 Пицца",   emoji: "🧀", name: "Четыре сыра",         price: 520 },
+
+    { id: "burger",     cat: "🍔 Бургеры", emoji: "🍔", name: "Тройной Чизбургер",   price: 320 },
+    { id: "classic",    cat: "🍔 Бургеры", emoji: "🍔", name: "Классический бургер", price: 250 },
+    { id: "chicken",    cat: "🍔 Бургеры", emoji: "🍗", name: "Чикен бургер",        price: 280 },
+
+    { id: "cola",       cat: "🥤 Напитки", emoji: "🥤", name: "Кола 0.5 л",          price: 90 },
+    { id: "juice",      cat: "🥤 Напитки", emoji: "🧃", name: "Сок яблочный",        price: 100 },
+    { id: "water",      cat: "🥤 Напитки", emoji: "💧", name: "Вода 0.5 л",          price: 60 },
+    { id: "icetea",     cat: "🥤 Напитки", emoji: "🍹", name: "Холодный чай",        price: 110 }
   ];
 
-  // === ВОЗМОЖНЫЕ СКИДКИ. Чем чаще число в списке, тем чаще оно выпадает ===
+  // Возможные скидки. Чем чаще число в списке, тем чаще оно выпадает
   const PRIZES = [5, 5, 5, 5, 10, 10, 10, 15, 15, 20];
 
   const count = {};
   const checked = {};
   products.forEach(p => { count[p.id] = 0; checked[p.id] = true; });
 
-  // Память об игре: играть можно раз в день
   const today = new Date().toDateString();
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem("gift") || "{}"); } catch (e) {}
-  let discount = saved.date === today ? saved.percent : null; // null = ещё не играл
+  let discount = (saved.date === today && !TEST_MODE) ? saved.percent : null;
   let openedBox = -1;
-
   let screen = "menu";
 
   function change(id, d) {
@@ -126,10 +138,27 @@
     </div>`;
   }
 
+  // Фото блюда. Если файла нет, показываем смайлик
+  function pictureHTML(p) {
+    return `<img class="photo" src="images/${p.id}.jpg" alt="${p.name}"
+      onerror="this.outerHTML='<div class=product-emoji>${p.emoji}</div>'">`;
+  }
+
+  function cardHTML(p) {
+    return `<div class="product-card">
+      ${pictureHTML(p)}
+      <h3>${p.name}</h3>
+      <p class="price">${p.price} ₽</p>
+      ${count[p.id] === 0
+        ? `<button class="add-btn" onclick="change('${p.id}', 1)">В корзину</button>`
+        : counterHTML(p.id)}
+    </div>`;
+  }
+
   function gameHTML() {
     if (discount === null) {
       return `<h3>🎁 Выиграй скидку!</h3>
-        <p>Открой одну коробку. Играть можно раз в день.</p>
+        <p>Открой одну коробку.${TEST_MODE ? "" : " Играть можно раз в день."}</p>
         <div class="boxes">
           <button class="box" onclick="openBox(0)">🎁</button>
           <button class="box" onclick="openBox(1)">🎁</button>
@@ -152,18 +181,11 @@
   }
 
   function render() {
-    // меню
-    document.getElementById("menu-list").innerHTML = products.map(p => `
-      <div class="product-card">
-        <div class="product-emoji">${p.emoji}</div>
-        <h3>${p.name}</h3>
-        <p class="price">${p.price} ₽</p>
-        ${count[p.id] === 0
-          ? `<button class="add-btn" onclick="change('${p.id}', 1)">В корзину</button>`
-          : counterHTML(p.id)}
-      </div>`).join("");
+    document.getElementById("menu-list").innerHTML = CATEGORIES.map(c =>
+      `<h2 class="cat">${c}</h2>` +
+      products.filter(p => p.cat === c).map(cardHTML).join("")
+    ).join("");
 
-    // корзина
     const inCart = products.filter(p => count[p.id] > 0);
     document.getElementById("cart-list").innerHTML = inCart.map(p => `
       <div class="cart-row ${checked[p.id] ? "" : "off"}">
@@ -174,16 +196,13 @@
 
     document.getElementById("game").innerHTML = gameHTML();
 
-    // итоговая сумма
     const old = checkedSum(), now = finalSum();
     document.getElementById("total-line").innerHTML = discount
       ? `Итого: <span class="old-price">${old} ₽</span>${now} ₽`
       : `Итого: ${now} ₽`;
     document.getElementById("discount-line").innerText = discount
-      ? `Скидка ${discount}% — ты экономишь ${old - now} ₽`
-      : "";
+      ? `Скидка ${discount}% — ты экономишь ${old - now} ₽` : "";
 
-    // нижняя кнопка
     const btn = document.getElementById("main-btn");
     if (screen === "menu") {
       btn.classList.toggle("hidden", allSum() === 0);
