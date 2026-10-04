@@ -19,7 +19,6 @@
   .count-btn { background:#ff9800; color:#000; border:none; padding:10px 15px; font-weight:bold; font-size:16px; cursor:pointer; }
   .count-text { font-weight:bold; }
 
-  /* корзина */
   .cart-row { display:flex; align-items:center; gap:12px; background:#1e1e1e; border:1px solid #2c2c2c; border-radius:12px; padding:12px; text-align:left; }
   .cart-row.off { opacity:.45; }
   .cart-row input[type=checkbox] { width:24px; height:24px; accent-color:#ff9800; flex-shrink:0; }
@@ -30,6 +29,18 @@
   .cart-row .count-btn { padding:8px 12px; }
   .back-btn { background:none; border:none; color:#ff9800; font-size:16px; cursor:pointer; float:left; }
   .total-line { margin-top:20px; font-size:20px; font-weight:bold; }
+  .old-price { color:#888; text-decoration:line-through; font-size:16px; margin-right:8px; }
+  .discount-line { color:#ff9800; font-size:15px; margin-top:6px; }
+
+  /* игра */
+  .game { margin-top:25px; background:#1e1e1e; border:2px dashed #ff9800; border-radius:12px; padding:15px; }
+  .game h3 { margin:0 0 5px; color:#ff9800; }
+  .game p { margin:0 0 12px; color:#aaa; font-size:14px; }
+  .boxes { display:flex; justify-content:center; gap:12px; }
+  .box { font-size:44px; background:#2c2c2c; border:none; border-radius:12px; width:80px; height:80px; cursor:pointer; transition:transform .15s; }
+  .box:active { transform:scale(.9); }
+  .box.win { background:#ff9800; font-size:20px; font-weight:bold; color:#000; }
+  .win-text { font-size:18px; font-weight:bold; color:#4caf50; margin-top:12px; }
 
   .main-btn { position:fixed; bottom:15px; left:15px; right:15px; background:#4caf50; color:#fff; border:none; padding:15px; border-radius:10px; font-size:16px; font-weight:bold; cursor:pointer; box-shadow:0 -4px 10px rgba(0,0,0,.5); z-index:1000; }
   .main-btn:disabled { background:#555; }
@@ -52,7 +63,11 @@
   <button class="back-btn" onclick="showMenu()">← В меню</button>
   <div class="header"><h1>🛒 Твоя корзина</h1><p>Убери галочку, если не хочешь это блюдо</p></div>
   <div class="list" id="cart-list"></div>
-  <div class="total-line">Итого: <span id="cart-total">0</span> ₽</div>
+
+  <div class="game" id="game"></div>
+
+  <div class="total-line" id="total-line"></div>
+  <div class="discount-line" id="discount-line"></div>
 </div>
 
 <button id="main-btn" class="main-btn hidden" onclick="mainAction()"></button>
@@ -61,15 +76,26 @@
   const tg = window.Telegram && window.Telegram.WebApp;
   if (tg) { tg.ready(); tg.expand(); }
 
-  // === ТУТ МЕНЮ. Чтобы добавить блюдо, скопируй строку и поменяй ===
+  // === МЕНЮ. Чтобы добавить блюдо, скопируй строку и поменяй ===
+  // (то же самое блюдо нужно добавить и в bot.js, в список MENU)
   const products = [
     { id: "pizza",  emoji: "🍕", name: "Пепперони Премиум", price: 450 },
     { id: "burger", emoji: "🍔", name: "Тройной Чизбургер", price: 320 }
   ];
 
-  const count = {};    // сколько штук каждого блюда
-  const checked = {};  // стоит ли галочка
+  // === ВОЗМОЖНЫЕ СКИДКИ. Чем чаще число в списке, тем чаще оно выпадает ===
+  const PRIZES = [5, 5, 5, 5, 10, 10, 10, 15, 15, 20];
+
+  const count = {};
+  const checked = {};
   products.forEach(p => { count[p.id] = 0; checked[p.id] = true; });
+
+  // Память об игре: играть можно раз в день
+  const today = new Date().toDateString();
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem("gift") || "{}"); } catch (e) {}
+  let discount = saved.date === today ? saved.percent : null; // null = ещё не играл
+  let openedBox = -1;
 
   let screen = "menu";
 
@@ -80,8 +106,17 @@
   }
   function toggle(id) { checked[id] = !checked[id]; render(); }
 
+  function openBox(i) {
+    if (discount !== null) return;
+    discount = PRIZES[Math.floor(Math.random() * PRIZES.length)];
+    openedBox = i;
+    localStorage.setItem("gift", JSON.stringify({ date: today, percent: discount }));
+    render();
+  }
+
   function allSum()     { return products.reduce((s, p) => s + p.price * count[p.id], 0); }
   function checkedSum() { return products.reduce((s, p) => s + (checked[p.id] ? p.price * count[p.id] : 0), 0); }
+  function finalSum()   { return Math.round(checkedSum() * (1 - (discount || 0) / 100)); }
 
   function counterHTML(id) {
     return `<div class="counter">
@@ -89,6 +124,31 @@
       <span class="count-text">${count[id]} шт</span>
       <button class="count-btn" onclick="change('${id}', 1)">+</button>
     </div>`;
+  }
+
+  function gameHTML() {
+    if (discount === null) {
+      return `<h3>🎁 Выиграй скидку!</h3>
+        <p>Открой одну коробку. Играть можно раз в день.</p>
+        <div class="boxes">
+          <button class="box" onclick="openBox(0)">🎁</button>
+          <button class="box" onclick="openBox(1)">🎁</button>
+          <button class="box" onclick="openBox(2)">🎁</button>
+        </div>`;
+    }
+    if (openedBox >= 0) {
+      let boxes = "";
+      for (let i = 0; i < 3; i++) {
+        boxes += i === openedBox
+          ? `<button class="box win" disabled>−${discount}%</button>`
+          : `<button class="box" disabled style="opacity:.4">🎁</button>`;
+      }
+      return `<h3>🎉 Поздравляем!</h3><div class="boxes">${boxes}</div>
+        <div class="win-text">Твоя скидка: ${discount}%</div>`;
+    }
+    return `<h3>🎁 Игра на сегодня сыграна</h3>
+      <div class="win-text">Твоя скидка: ${discount}%</div>
+      <p style="margin-top:8px">Приходи завтра за новой!</p>`;
   }
 
   function render() {
@@ -111,7 +171,17 @@
         <div class="cart-info"><b>${p.emoji} ${p.name}</b><span>${p.price * count[p.id]} ₽</span></div>
         ${counterHTML(p.id)}
       </div>`).join("");
-    document.getElementById("cart-total").innerText = checkedSum();
+
+    document.getElementById("game").innerHTML = gameHTML();
+
+    // итоговая сумма
+    const old = checkedSum(), now = finalSum();
+    document.getElementById("total-line").innerHTML = discount
+      ? `Итого: <span class="old-price">${old} ₽</span>${now} ₽`
+      : `Итого: ${now} ₽`;
+    document.getElementById("discount-line").innerText = discount
+      ? `Скидка ${discount}% — ты экономишь ${old - now} ₽`
+      : "";
 
     // нижняя кнопка
     const btn = document.getElementById("main-btn");
@@ -122,7 +192,7 @@
     } else {
       btn.classList.remove("hidden");
       btn.disabled = checkedSum() === 0;
-      btn.innerText = `✅ Оформить заказ (${checkedSum()} ₽)`;
+      btn.innerText = `✅ Оформить заказ (${now} ₽)`;
     }
   }
 
@@ -143,11 +213,12 @@
   function mainAction() { screen === "menu" ? showCart() : sendOrder(); }
 
   function sendOrder() {
-    const order = products
+    const items = products
       .filter(p => count[p.id] > 0 && checked[p.id])
-      .map(p => ({ name: p.name, count: count[p.id], price: p.price }));
-    if (order.length === 0) return;
-    if (tg) { tg.sendData(JSON.stringify(order)); tg.close(); }
+      .map(p => ({ id: p.id, count: count[p.id] }));
+    if (items.length === 0) return;
+    const data = { items: items, discount: discount || 0 };
+    if (tg) { tg.sendData(JSON.stringify(data)); tg.close(); }
     else alert("Открой приложение через бота в Телеграме!");
   }
 
