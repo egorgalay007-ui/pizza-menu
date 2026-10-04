@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Доставка Еды</title>
-    <script src="https://telegram.org/js/telegram-web-app.js."></script>
+    <script src="https://telegram.org"></script>
     <style>
         body { background-color: #121212; color: #ffffff; font-family: Arial, sans-serif; margin: 0; padding: 15px; padding-bottom: 90px; text-align: center; }
         .header h1 { margin-bottom: 5px; color: #ff9800; }
@@ -17,7 +17,7 @@
         .counter-container { display: flex; justify-content: space-between; align-items: center; background-color: #2c2c2c; border-radius: 8px; padding: 2px; }
         .count-btn { background-color: #ff9800; color: black; border: none; padding: 10px 20px; font-weight: bold; font-size: 16px; cursor: pointer; border-radius: 6px; }
         .count-text { font-weight: bold; color: #fff; font-size: 16px; }
-        .order-main-btn { position: fixed; bottom: -100px; left: 15px; right: 15px; width: calc(100% - 30px); background-color: #4caf50; color: white; border: none; padding: 15px; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; transition: bottom 0.3s ease; box-shadow: 0 -4px 10px rgba(0,0,0,0.5); z-index: 1000; display: none; }
+        .order-main-btn { position: fixed; bottom: 15px; left: 15px; right: 15px; width: calc(100% - 30px); background-color: #4caf50; color: white; border: none; padding: 15px; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 -4px 10px rgba(0,0,0,0.5); z-index: 1000; display: none; }
     </style>
 </head>
 <body>
@@ -28,7 +28,6 @@
     </div>
 
     <div class="menu-container">
-        <!-- Пицца -->
         <div class="product-card">
             <div class="product-emoji">🍕</div>
             <h3>Пепперони Премиум</h3>
@@ -38,7 +37,6 @@
             </div>
         </div>
 
-        <!-- Бургер -->
         <div class="product-card">
             <div class="product-emoji">🍔</div>
             <h3>Тройной Чизбургер</h3>
@@ -49,7 +47,6 @@
         </div>
     </div>
 
-    <!-- Кнопка заказа -->
     <button id="order-btn" class="order-main-btn" onclick="sendOrder()">
         🛒 Посмотреть заказ (<span id="total-price">0</span> ₽)
     </button>
@@ -93,16 +90,12 @@
         function renderOrderButton() {
             const btn = document.getElementById("order-btn");
             const priceSpan = document.getElementById("total-price");
-            
             let total = (products.pizza.count * products.pizza.price) + (products.burger.count * products.burger.price);
             priceSpan.innerText = total;
-
             if (total > 0) {
                 btn.style.display = "block";
-                setTimeout(() => { btn.style.bottom = "15px"; }, 10);
             } else {
-                btn.style.bottom = "-100px";
-                setTimeout(() => { btn.style.display = "none"; }, 300);
+                btn.style.display = "none";
             }
         }
 
